@@ -4,21 +4,22 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import PublicLayout from '@/layouts/PublicLayout.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
-        switch (true) {
-            case name === 'Welcome' || name === 'Home':
-    return null;
+       switch (true) {
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
-            default:
+            case name === 'Dashboard' || name.startsWith('admin/'):
                 return AppLayout;
+            default:
+                return PublicLayout; // <-- C'EST ICI QUE ÇA CHANGE
         }
     },
     withApp: (app) => {

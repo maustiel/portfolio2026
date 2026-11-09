@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +25,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->configureDefaults();
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $response) {
+            if (in_array($response->statusCode(), [403, 404])) {
+                return $response->render('ErrorPage', [
+                    'status' => $response->statusCode(),
+                ])->withSharedData();
+            }
+
+            return null;
+        });
     }
 
     /**
