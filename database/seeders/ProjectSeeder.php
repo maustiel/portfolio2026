@@ -27,7 +27,7 @@ class ProjectSeeder extends Seeder
             'cover_path' => 'images/meteo-wavre.jpg',
             'demo_url' => 'https://example.com/meteo',
             'repo_url' => 'https://github.com/exemple/meteo-wavre',
-            'published_at' => now(),
+            'published_at' => null,
             'position' => 1,
         ]);
         $meteo->tags()->attach([$javascript->id]);

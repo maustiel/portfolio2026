@@ -11,8 +11,9 @@ class ProjectController extends Controller
 {
     public function index(): Response
     {
-        // 1. On récupère les projets depuis la base de données
-        $projects = Project::with('tags')
+        // On ajoute published() juste avant le with()
+        $projects = Project::published()
+            ->with('tags')
             ->orderBy('position')
             ->get()
             ->map(fn(Project $project) => [
@@ -32,6 +33,7 @@ class ProjectController extends Controller
     }
     public function show(Project $project): Response
     {
+        abort_if($project->published_at === null, 404);
         $project->load('tags');
 
         return Inertia::render('projects/Show', [

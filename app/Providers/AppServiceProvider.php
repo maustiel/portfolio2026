@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Route;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Route::resourceVerbs(['create' => 'nouveau', 'edit' => 'modifier']);
         Inertia::handleExceptionsUsing(function (ExceptionResponse $response) {
             if (in_array($response->statusCode(), [403, 404])) {
                 return $response->render('ErrorPage', [

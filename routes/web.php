@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\Admin;
 
 Route::get('/', function () {
     return Inertia::render('Home', [
@@ -23,4 +24,23 @@ Route::get('/', [ProjectController::class, 'index'])->name('home');
 Route::get('projets/{project:slug}', [ProjectController::class, 'show'])->name('projects.show');
 
 
-require __DIR__.'/settings.php';
+
+// Le groupe sécurisé /admin
+Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('projets', Admin\ProjectController::class)
+        ->except('show')
+        ->names('projects')
+        ->parameters(['projets' => 'project']);
+
+    Route::patch('projets/{project}/publication', [App\Http\Controllers\Admin\ProjectController::class, 'togglePublished'])
+        ->name('projects.toggle-published');
+
+    // Il faut placer monter et descendre ICI, à l'intérieur du groupe !
+    Route::patch('projets/{project}/monter', [App\Http\Controllers\Admin\ProjectController::class, 'moveUp'])
+        ->name('projects.move-up');
+
+    Route::patch('projets/{project}/descendre', [App\Http\Controllers\Admin\ProjectController::class, 'moveDown'])
+        ->name('projects.move-down');
+});
+
+require __DIR__ . '/settings.php';
