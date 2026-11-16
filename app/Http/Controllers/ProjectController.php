@@ -39,10 +39,14 @@ class ProjectController extends Controller
         return Inertia::render('projects/Show', [
             'project' => [
                 ...$project->only('title', 'slug', 'summary', 'content', 'demo_url', 'repo_url'),
-                'cover_url' => $project->cover_path
-                    ? Storage::disk('public')->url($project->cover_path)
-                    : null,
-                'tags' => $project->tags->pluck('name'),
+                'cover_url' => $project->cover_url,
+                'tags' => $project->tags()->pluck('tags.name'),
+            ],
+        ])->withViewData([
+            'meta' => [
+                'title' => $project->title,
+                'description' => $project->summary,
+                'image' => $project->cover_url,
             ],
         ]);
     }

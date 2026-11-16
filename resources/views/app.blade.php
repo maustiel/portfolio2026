@@ -41,11 +41,21 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+
+    @isset($meta)
+         <meta property="og:title" content="{{ $meta['title'] }}">
+         <meta property="og:description" content="{{ $meta['description'] }}">
+         @if ($meta['image'])
+             <meta property="og:image" content="{{ $meta['image'] }}">
+         @endif
+     @endisset
+
+
     @fonts
 
     @vite(['resources/css/app.css', 'resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
     <x-inertia::head>
-        <title>{{ config('app.name', 'Laravel') }}</title>
+       <title>{{ isset($meta) ? $meta['title'].' - ' : '' }}{{ config('app.name', 'Laravel') }}</title>
     </x-inertia::head>
 </head>
 

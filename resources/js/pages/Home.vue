@@ -1,17 +1,25 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage, Form } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { show } from '@/routes/projects';
+import { legal } from '@/routes';
+
+
+import ContactController from '@/actions/App/Http/Controllers/ContactController';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+
+
 
 defineProps({
     projects: Array,
 });
 
-const activeTab = ref('accueil');
-
-// Réglages des intercalaires
-// - color : couleur de l'onglet, de sa bande ET de la fiche (identique partout)
-// - x     : position horizontale (% de la largeur du dossier)
+// 1. On définit d'abord les onglets (Ne bouge pas)
 const tabs = [
     { id: 'accueil', label: 'Accueil', x: 5, color: '#ffcce6' },
     { id: 'a-propos', label: 'À propos', x: 28, color: '#ffff99' },
@@ -19,10 +27,25 @@ const tabs = [
     { id: 'contact', label: 'Contact', x: 74, color: '#99ccff' },
 ];
 
-// Pile des dossiers, du fond (index 0) jusqu'au devant (dernier index).
-// L'onglet choisi passe devant ; les autres gardent leur ordre relatif.
-const order = ref(['a-propos', 'contact', 'mes-projets', 'accueil']);
+// 2. On colle la NOUVELLE LOGIQUE juste ici (en dessous de tabs !)
+const page = usePage();
+const getTabFromUrl = () => {
+    if (!page.url.includes('?')) return null;
+    const params = new URLSearchParams(page.url.split('?')[1]);
+    return params.get('tab');
+};
 
+const tabParam = getTabFromUrl();
+
+// On ouvre l'onglet demandé dans l'URL, sinon 'accueil' par défaut
+const activeTab = ref(tabParam && tabs.some(t => t.id === tabParam) ? tabParam : 'accueil');
+
+// On calcule l'ordre de départ : tous les onglets, puis l'onglet actif tout à la fin (devant)
+const order = ref(
+    tabs.map(t => t.id).filter(id => id !== activeTab.value).concat(activeTab.value)
+);
+
+// 3. La suite de votre code (Ne bouge pas)
 const rankOf = (tab) => order.value.indexOf(tab.id);
 
 const select = (id) => {
@@ -33,13 +56,11 @@ const select = (id) => {
 const current = computed(() => tabs.find((t) => t.id === activeTab.value));
 
 // Bande colorée située derrière chaque onglet
-// Onglet survolé (hors onglet actif) : onglet + bande se soulèvent ensemble
 const hovered = ref(null);
 const isLifted = (tab) => hovered.value === tab.id && activeTab.value !== tab.id;
 
 const stripStyle = (tab) => ({
     top: `calc(${rankOf(tab)} * var(--step) + var(--tab-h))`,
-    // +8px : la bande se prolonge sous la suivante, pour qu'aucun vide n'apparaisse quand elle se soulève
     height: `calc((4 - ${rankOf(tab)}) * var(--step) + 8px)`,
     backgroundColor: tab.color,
     transform: isLifted(tab) ? 'translateY(-8px)' : 'none',
@@ -65,7 +86,13 @@ const tabStyle = (tab) => {
 </script>
 
 <template>
-    <Head title="Portfolio" />
+    <Head title="Accueil">
+    <meta
+        head-key="description"
+        name="description"
+        content="Portfolio de Maurine Meeus, Web Designer et Web Developer. Découvrez mes créations et mes derniers projets."
+    />
+</Head>
 
     <!-- LE FOND (grille rose clair, fixe pour couvrir tout l'écran) -->
     <div
@@ -149,6 +176,9 @@ const tabStyle = (tab) => {
                                     v-if="project.cover_url"
                                     :src="project.cover_url"
                                     :alt="project.title"
+                                    width="1200"
+                                    height="675"
+                                    loading="lazy"
                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
                                 <div v-else class="w-full h-full flex items-center justify-center text-gray-400 font-sans text-sm">Sans image</div>
@@ -164,21 +194,48 @@ const tabStyle = (tab) => {
                     </div>
                 </div>
 
-                <!-- 4. Contenu Contact -->
-                <div v-show="activeTab === 'contact'">
-                    <h2 class="font-cursive text-5xl mb-10">Travaillons ensemble</h2>
-                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-black/5 font-sans leading-relaxed text-lg max-w-2xl">
-                        <p class="mb-4">Un projet en tête ? Envie de collaborer ?</p>
-                        <p class="text-gray-500 italic mb-8">Le formulaire de contact arrive bientôt (Chapitre 1.20)...</p>
 
-                        <div class="inline-block bg-black text-white font-bold py-4 px-8 rounded-full rotate-2 hover:rotate-0 transition-transform cursor-pointer">
-                            M'envoyer un message ↗
-                        </div>
-                    </div>
-                </div>
+               <!-- 4. Contenu Contact -->
+             <div v-show="activeTab === 'contact'">
+                 <h2 class="font-cursive text-5xl mb-10">Travaillons ensemble</h2>
+                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-black/5 font-sans leading-relaxed text-lg max-w-2xl text-left">
+                     <p class="mb-4">Un projet en tête ? Envie de collaborer ? Écrivez-moi !</p>
+
+                     <Form
+                         v-bind="ContactController.store.form()"
+                         :reset-on-success="['name', 'email', 'message']"
+                         v-slot="{ errors, processing }"
+                         class="space-y-6 mt-6"
+                     >
+                         <div class="grid gap-2">
+                             <Label for="name" class="font-bold">Nom</Label>
+                             <Input id="name" name="name" autocomplete="name" class="border-black/20" />
+                             <InputError :message="errors.name" />
+                         </div>
+
+                         <div class="grid gap-2">
+                             <Label for="email" class="font-bold">Adresse e-mail</Label>
+                             <Input id="email" name="email" type="email" autocomplete="email" class="border-black/20" />
+                             <InputError :message="errors.email" />
+                         </div>
+
+                         <div class="grid gap-2">
+                             <Label for="message" class="font-bold">Message</Label>
+                             <Textarea id="message" name="message" rows="4" class="border-black/20" />
+                             <InputError :message="errors.message" />
+                         </div>
+
+                         <Button type="submit" :disabled="processing" class="bg-black text-white font-bold py-6 px-8 rounded-full hover:bg-[#ff8000] transition-colors w-full text-lg">
+                             <Spinner v-if="processing" class="mr-2" />
+                             Envoyer le message
+                         </Button>
+                     </Form>
+
+                 </div>
+             </div>
             </main>
 
-            <!-- Décorations (Étoile) -->
+           <!-- Décorations (Étoile) -->
             <div class="absolute top-1/2 -right-16 z-50 transform rotate-12 pointer-events-none drop-shadow-md">
                 <svg width="100" height="100" viewBox="0 0 100 100" fill="none" stroke="#ff8000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" /></svg>
             </div>
@@ -187,6 +244,12 @@ const tabStyle = (tab) => {
                 <svg width="80" height="80" viewBox="0 0 100 100" fill="#ff8000" stroke="black" stroke-width="4"><path d="M50 15 C 30 15, 20 35, 35 50 C 20 65, 40 85, 50 75 C 60 85, 80 65, 65 50 C 80 35, 70 15, 50 15" /></svg>
             </div>
         </div>
+
+        <!-- FOOTER (Déplacé ici, juste sous le dossier, dans le conteneur principal) -->
+        <footer class="mt-8 pb-4 text-center text-sm font-sans font-bold text-gray-500">
+            © Maurine Meeus - <Link :href="legal()" class="hover:text-black underline">Mentions légales</Link>
+        </footer>
+
     </div>
 </template>
 

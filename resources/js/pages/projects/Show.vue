@@ -1,52 +1,115 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link , router} from '@inertiajs/vue3';
 import { home } from '@/routes';
+import { ref } from 'vue';
+
 
 defineProps({
     project: Object,
 });
 
-// Couleurs des étiquettes (tags), en boucle
 const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
+
+const tabs = [
+    { id: 'accueil', label: 'Accueil', x: 5, color: '#ffcce6' },
+    { id: 'a-propos', label: 'À propos', x: 28, color: '#ffff99' },
+    { id: 'mes-projets', label: 'Mes projets', x: 51, color: '#99ffcc' },
+    { id: 'contact', label: 'Contact', x: 74, color: '#99ccff' },
+];
+
+const activeTab = ref('mes-projets');
+const order = ref(['a-propos', 'contact', 'accueil', 'mes-projets']);
+const rankOf = (tab) => order.value.indexOf(tab.id);
+
+// Effet de survol (identique à l'accueil)
+const hovered = ref(null);
+const isLifted = (tab) => hovered.value === tab.id && activeTab.value !== tab.id;
+
+// L'animation avant de changer de page !
+const selectAndGo = (id) => {
+    if (id === 'mes-projets') return;
+
+    // 1. On lance l'animation visuelle sur cette page
+    activeTab.value = id;
+    order.value = [...order.value.filter((tabId) => tabId !== id), id];
+
+    // 2. On attend 450ms (le temps de la transition CSS), puis on navigue
+    setTimeout(() => {
+        router.visit(`/?tab=${id}`);
+    }, 450);
+};
+
+const stripStyle = (tab) => ({
+    top: `calc(${rankOf(tab)} * var(--step) + var(--tab-h))`,
+    height: `calc((4 - ${rankOf(tab)}) * var(--step) + 8px)`,
+    backgroundColor: tab.color,
+    transform: isLifted(tab) ? 'translateY(-8px)' : 'none',
+    zIndex: 1 + rankOf(tab),
+});
+
+const tabStyle = (tab) => {
+    const isActive = tab.id === activeTab.value;
+    const rank = rankOf(tab);
+    return {
+        left: `${tab.x}%`,
+        top: `calc(${rank} * var(--step))`,
+        height: isActive
+            ? `calc(var(--zone) - ${rank} * var(--step) + 1px)`
+            : 'calc(var(--tab-h) + 12px)',
+        zIndex: isActive ? 20 : 1 + rank,
+        '--c': tab.color,
+        '--pad': isActive ? '0px' : '12px',
+        transform: isLifted(tab) ? 'translateY(-8px)' : 'none',
+    };
+};
 </script>
 
 <template>
     <Head :title="project.title" />
 
-    <!-- LE FOND (grille rose clair, fixe pour couvrir tout l'écran) -->
     <div
         class="fixed inset-0 z-0"
         style="background-color: #ffffff; background-image: linear-gradient(#fadce6 1px, transparent 1px), linear-gradient(90deg, #fadce6 1px, transparent 1px); background-size: 50px 50px;"
     ></div>
 
-    <div class="max-w-5xl mx-auto pt-12 px-4 pb-20 relative z-10">
-        <!-- LE DOSSIER -->
+    <div class="max-w-6xl mx-auto pt-12 px-4 pb-20 relative z-10">
         <div class="folder relative mt-10 text-black">
-            <!-- LES INTERCALAIRES -->
-            <div class="relative" style="height: var(--zone)">
-                <!-- Bandes colorées derrière -->
-                <div class="strip" style="top: var(--tab-h); height: calc(2 * var(--step) + 8px); background-color: #ffcce6; z-index: 1" aria-hidden="true"></div>
-                <div class="strip" style="top: calc(var(--step) + var(--tab-h)); height: calc(var(--step) + 8px); background-color: #ffff99; z-index: 2" aria-hidden="true"></div>
+            <div class="relative" style="height: var(--zone)" role="tablist">
+                <div
+                    v-for="tab in tabs"
+                    :key="`strip-${tab.id}`"
+                    class="strip"
+                    :style="stripStyle(tab)"
+                    aria-hidden="true"
+                ></div>
 
-                <!-- Onglet décoratif (jaune) -->
-                <span class="tab" style="left: 65%; top: var(--step); height: calc(var(--tab-h) + 12px); --c: #ffff99; --pad: 12px; z-index: 2">
-                    <span class="tab-label">Dossier projet</span>
-                </span>
-
-                <!-- Onglet retour (menthe), relié à la fiche -->
-                <Link
-                    :href="home()"
-                    class="tab tab-link"
-                    style="left: 5%; top: calc(2 * var(--step)); height: calc(var(--tab-h) + 1px); --c: #99ffcc; --pad: 0px; z-index: 20"
+                <!-- URL absolue stricte pour forcer le retour à l'accueil avec l'onglet choisi -->
+             <a
+                    v-for="tab in tabs"
+                    :key="tab.id"
+                    :href="tab.id === 'mes-projets' ? '#' : `/?tab=${tab.id}`"
+                    @click.prevent="selectAndGo(tab.id)"
+                    @mouseenter="hovered = tab.id"
+                    @mouseleave="hovered = null"
+                    @focus="hovered = tab.id"
+                    @blur="hovered = null"
+                    :class="['tab', 'tab-link', { 'is-active': activeTab === tab.id }]"
+                    :style="tabStyle(tab)"
                 >
-                    <span class="tab-label">← Mes projets</span>
-                </Link>
+                    <span class="tab-label">{{ tab.label }}</span>
+                </a>
             </div>
 
-            <!-- LA FICHE PRINCIPALE -->
-            <article class="relative z-10 rounded-b-[40px] bg-[#99ffcc] p-6 md:p-12 shadow-2xl">
+            <article class="relative z-10 rounded-b-[40px] bg-[#99ffcc] min-h-[560px] p-6 md:p-12 shadow-2xl">
+
+                <!-- Le nouveau bouton retour aux projets -->
+                <div class="mb-10">
+                    <Link href="/?tab=mes-projets" class="inline-block bg-white text-black font-bold py-3 px-6 rounded-full border-2 border-black hover:bg-[#ffcce6] hover:-translate-y-1 transition-all shadow-sm">
+                        ← Retour aux projets
+                    </Link>
+                </div>
+
                 <div class="grid gap-10 md:grid-cols-5 items-start">
-                    <!-- Image de couverture façon photo collée -->
                     <div class="md:col-span-2">
                         <div class="bg-white p-4 pb-10 rounded-2xl shadow-md border border-black/10 -rotate-2 hover:rotate-0 transition-transform duration-300">
                             <div class="bg-gray-100 aspect-[4/3] rounded-xl overflow-hidden border border-black/5">
@@ -54,6 +117,8 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
                                     v-if="project.cover_url"
                                     :src="project.cover_url"
                                     :alt="project.title"
+                                    width="1200"
+                                    height="675"
                                     class="w-full h-full object-cover"
                                 />
                                 <div v-else class="w-full h-full flex items-center justify-center text-gray-400 font-sans text-sm">Sans image</div>
@@ -61,7 +126,6 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
                         </div>
                     </div>
 
-                    <!-- Titre, résumé, tags, liens -->
                     <div class="md:col-span-3 space-y-6">
                         <h1 class="font-cursive text-5xl md:text-7xl text-black leading-tight drop-shadow-[3px_3px_0_rgba(255,255,255,1)]">
                             {{ project.title }}
@@ -81,29 +145,16 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
                         </ul>
 
                         <div v-if="project.demo_url || project.repo_url" class="flex flex-wrap gap-4 pt-2">
-                            <a
-                                v-if="project.demo_url"
-                                :href="project.demo_url"
-                                target="_blank"
-                                rel="noopener"
-                                class="bg-black text-white font-sans font-bold py-3 px-6 rounded-xl hover:bg-[#ff8000] hover:scale-[1.02] transition-all"
-                            >
+                            <a v-if="project.demo_url" :href="project.demo_url" target="_blank" rel="noopener" class="bg-black text-white font-sans font-bold py-3 px-6 rounded-xl hover:bg-[#ff8000] hover:scale-[1.02] transition-all">
                                 Démo ↗
                             </a>
-                            <a
-                                v-if="project.repo_url"
-                                :href="project.repo_url"
-                                target="_blank"
-                                rel="noopener"
-                                class="bg-white text-black font-sans font-bold py-3 px-6 rounded-xl border-2 border-black hover:bg-[#ffff99] hover:scale-[1.02] transition-all"
-                            >
+                            <a v-if="project.repo_url" :href="project.repo_url" target="_blank" rel="noopener" class="bg-white text-black font-sans font-bold py-3 px-6 rounded-xl border-2 border-black hover:bg-[#ffff99] hover:scale-[1.02] transition-all">
                                 Code ↗
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Contenu détaillé -->
                 <div
                     v-if="project.content"
                     class="mt-12 bg-white p-6 md:p-10 rounded-3xl shadow-sm border border-black/5 font-sans prose prose-lg max-w-none prose-headings:font-cursive prose-headings:font-normal prose-a:text-[#ff8000] prose-img:rounded-2xl"
@@ -111,7 +162,6 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
                 ></div>
             </article>
 
-            <!-- Décorations -->
             <div class="absolute top-1/2 -right-12 z-50 transform rotate-12 pointer-events-none drop-shadow-md hidden md:block">
                 <svg width="90" height="90" viewBox="0 0 100 100" fill="none" stroke="#ff8000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" /></svg>
             </div>
@@ -126,11 +176,10 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
 .folder {
     --tab-h: 46px;
     --step: 24px;
-    --zone: calc(var(--tab-h) + 2 * var(--step)); /* hauteur de la zone d'intercalaires */
-    --sr: 12px; /* arrondi des coins des bandes */
-    --r: 6px; /* rayon de l'épaulement à la base de l'onglet (petit sur mobile pour ne pas dépasser) */
+    --zone: calc(var(--tab-h) + 4 * var(--step));
+    --sr: 12px;
+    --r: 6px;
 }
-
 @media (min-width: 768px) {
     .folder {
         --tab-h: 60px;
@@ -139,26 +188,33 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
         --sr: 24px;
     }
 }
-
 .strip {
     position: absolute;
     left: 0;
     right: 0;
     border-radius: var(--sr) var(--sr) 0 0;
+    transition: /* AJOUTEZ CECI */
+        top 0.45s ease,
+        height 0.45s ease,
+        transform 0.25s ease,
+        background-color 0.3s ease;
 }
-
 .tab {
     position: absolute;
-    width: 30%;
+    width: 21%;
     display: flex;
     align-items: flex-start;
     justify-content: center;
     background-color: var(--c);
+    border: 0;
     border-radius: 26px 26px 0 0;
     text-decoration: none;
+    transition: /* AJOUTEZ CECI */
+        top 0.45s ease,
+        height 0.45s ease,
+        transform 0.25s ease,
+        background-color 0.3s ease;
 }
-
-/* Épaulements courbes à la base de l'onglet */
 .tab::before,
 .tab::after {
     content: '';
@@ -176,7 +232,6 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
     right: calc(var(--r) * -1);
     background: radial-gradient(circle at 100% 0, transparent calc(var(--r) - 0.5px), var(--c) var(--r));
 }
-
 .tab-label {
     display: flex;
     align-items: center;
@@ -188,21 +243,21 @@ const tagColors = ['#ffcce6', '#ffff99', '#ffd699', '#99ccff'];
     white-space: nowrap;
     text-overflow: ellipsis;
     font-family: 'Poppins', sans-serif;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.02em;
     color: #000;
 }
-
 @media (min-width: 768px) {
     .tab-label {
         font-size: 14px;
         letter-spacing: 0.06em;
     }
 }
-
-/* L'onglet « retour » est un lien cliquable */
+.tab.is-active .tab-label {
+    font-weight: 800;
+}
 .tab-link {
     cursor: pointer;
 }
