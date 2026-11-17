@@ -12,12 +12,13 @@ use Inertia\Response;
 
 class ContactController extends Controller
 {
-    public function create(): Response
+    // Si quelqu'un tape /contact dans l'URL, on le redirige vers le dossier
+    public function create()
     {
-        return Inertia::render('Contact');
+        return redirect('/?tab=contact');
     }
 
-    public function store(ContactMessageRequest $request): RedirectResponse
+    public function store(ContactMessageRequest $request)
     {
         // 1. Sauvegarde
         $contactMessage = ContactMessage::create($request->validated());
@@ -25,9 +26,10 @@ class ContactController extends Controller
         // 2. Envoi de l'e-mail
         Mail::to(config('mail.from.address'))->send(new ContactMessageReceived($contactMessage));
 
-        // 3. Message Flash et retour
+        // 3. Message Flash
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Merci, votre message est bien parti.']);
 
-        return to_route('contact');
+        // 4. LA CORRECTION EST ICI : on redirige vers l'accueil avec le bon onglet d'ouvert !
+        return redirect('/?tab=contact');
     }
 }

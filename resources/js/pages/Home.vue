@@ -1,10 +1,7 @@
 <script setup>
-import { Head, Link, usePage, Form } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, Form ,usePage } from '@inertiajs/vue3';
+import FolderLayout from '@/layouts/FolderLayout.vue';
 import { show } from '@/routes/projects';
-import { legal } from '@/routes';
-
-
 import ContactController from '@/actions/App/Http/Controllers/ContactController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -13,352 +10,376 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 
-
-
 defineProps({
     projects: Array,
 });
 
-// 1. On définit d'abord les onglets (Ne bouge pas)
-const tabs = [
-    { id: 'accueil', label: 'Accueil', x: 5, color: '#ffcce6' },
-    { id: 'a-propos', label: 'À propos', x: 28, color: '#ffff99' },
-    { id: 'mes-projets', label: 'Mes projets', x: 51, color: '#99ffcc' },
-    { id: 'contact', label: 'Contact', x: 74, color: '#99ccff' },
+// --- À propos (carnet) ---
+// Mets ici l'adresse de ta photo, par exemple '/images/maurine.jpg' (dans public/images)
+const photo = null;
+
+const tools = [
+    { name: 'Laravel', color: '#ff5a4d', left: '6%', top: '-10%', rotate: -8 },
+    { name: 'Vue 3', color: '#41b883', left: '33%', top: '-30%', rotate: 5 },
+    { name: 'Inertia', color: '#9553e9', left: '60%', top: '-8%', rotate: 9 },
+    { name: 'Tailwind', color: '#38bdf8', left: '38%', top: '10%', rotate: -4 },
 ];
 
-// 2. On colle la NOUVELLE LOGIQUE juste ici (en dessous de tabs !)
+// --- Accueil (hero) ---
+const year = new Date().getFullYear();
+
+// Les 4 coins « poignées » de la boîte de sélection
+const handles = ['-left-2 -top-2', '-right-2 -top-2', '-left-2 -bottom-2', '-right-2 -bottom-2'];
+
+// Chaque chiffre de l'année est légèrement décalé / incliné
+const digitStyles = [
+    'rotate(-8deg) translateY(4px)',
+    'rotate(7deg) translateY(-4px)',
+    'rotate(-5deg) translateY(3px)',
+    'rotate(9deg) translateY(-3px)',
+];
+
 const page = usePage();
-const getTabFromUrl = () => {
-    if (!page.url.includes('?')) return null;
-    const params = new URLSearchParams(page.url.split('?')[1]);
-    return params.get('tab');
-};
 
-const tabParam = getTabFromUrl();
-
-// On ouvre l'onglet demandé dans l'URL, sinon 'accueil' par défaut
-const activeTab = ref(tabParam && tabs.some(t => t.id === tabParam) ? tabParam : 'accueil');
-
-// On calcule l'ordre de départ : tous les onglets, puis l'onglet actif tout à la fin (devant)
-const order = ref(
-    tabs.map(t => t.id).filter(id => id !== activeTab.value).concat(activeTab.value)
-);
-
-// 3. La suite de votre code (Ne bouge pas)
-const rankOf = (tab) => order.value.indexOf(tab.id);
-
-const select = (id) => {
-    activeTab.value = id;
-    order.value = [...order.value.filter((tabId) => tabId !== id), id];
-};
-
-const current = computed(() => tabs.find((t) => t.id === activeTab.value));
-
-// Bande colorée située derrière chaque onglet
-const hovered = ref(null);
-const isLifted = (tab) => hovered.value === tab.id && activeTab.value !== tab.id;
-
-const stripStyle = (tab) => ({
-    top: `calc(${rankOf(tab)} * var(--step) + var(--tab-h))`,
-    height: `calc((4 - ${rankOf(tab)}) * var(--step) + 8px)`,
-    backgroundColor: tab.color,
-    transform: isLifted(tab) ? 'translateY(-8px)' : 'none',
-    zIndex: 1 + rankOf(tab),
-});
-
-// Onglet : court quand il est en retrait, il descend jusqu'à la fiche quand il est actif
-const tabStyle = (tab) => {
-    const isActive = tab.id === activeTab.value;
-    const rank = rankOf(tab);
-    return {
-        left: `${tab.x}%`,
-        top: `calc(${rank} * var(--step))`,
-        height: isActive
-            ? `calc(var(--zone) - ${rank} * var(--step) + 1px)`
-            : 'calc(var(--tab-h) + 12px)',
-        zIndex: isActive ? 20 : 1 + rank,
-        '--c': tab.color,
-        '--pad': isActive ? '0px' : '12px',
-        transform: isLifted(tab) ? 'translateY(-8px)' : 'none',
-    };
-};
 </script>
 
 <template>
     <Head title="Accueil">
-    <meta
-        head-key="description"
-        name="description"
-        content="Portfolio de Maurine Meeus, Web Designer et Web Developer. Découvrez mes créations et mes derniers projets."
-    />
-</Head>
+        <meta head-key="description" name="description" content="Portfolio de Maurine Meeus, Web Designer et Web Developer. Découvrez mes créations et mes derniers projets." />
+    </Head>
 
-    <!-- LE FOND (grille rose clair, fixe pour couvrir tout l'écran) -->
-    <div
-        class="fixed inset-0 z-0"
-        style="background-color: #ffffff; background-image: linear-gradient(#fadce6 1px, transparent 1px), linear-gradient(90deg, #fadce6 1px, transparent 1px); background-size: 50px 50px;"
-    ></div>
+    <!-- On utilise le Layout et on récupère l'onglet actif grâce à v-slot -->
+    <FolderLayout mode="home" v-slot="{ activeTab }">
 
-    <!-- LE CONTENU PRINCIPAL -->
-    <div class="max-w-6xl mx-auto pt-12 px-4 pb-20 relative z-10">
-        <!-- LE DOSSIER -->
-        <div class="folder relative mt-10 text-black">
-            <!-- LES INTERCALAIRES -->
-            <div class="relative" style="height: var(--zone)" role="tablist" aria-label="Sections du portfolio">
-                <!-- Bandes colorées empilées derrière les onglets -->
+        <!-- 1. Contenu Accueil -->
+        <div
+            v-show="activeTab === 'accueil'"
+            class="hero relative overflow-hidden rounded-[32px] px-4 pt-14 pb-32 md:pt-20 md:pb-28 min-h-[480px] md:min-h-[560px] flex items-start justify-center"
+        >
+            <!-- Fond dégradé flou (orange, rose, bleu) -->
+            <div class="pointer-events-none absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-[#ffb347] opacity-70 blur-3xl" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute -top-24 right-0 h-72 w-[26rem] rounded-full bg-[#f4a6cb] opacity-60 blur-3xl" aria-hidden="true"></div>
+            <div class="pointer-events-none absolute -bottom-28 -right-16 h-72 w-72 rounded-full bg-[#b8c6f5] opacity-70 blur-3xl" aria-hidden="true"></div>
+
+            <!-- Boîte de sélection + titre -->
+            <div class="relative w-full max-w-2xl">
+                <div class="relative border-2 border-dashed border-[#6b2d4f] px-6 pt-8 pb-14 md:px-12 md:pt-12 md:pb-20 -rotate-1">
+                    <span
+                        v-for="pos in handles"
+                        :key="pos"
+                        :class="['absolute h-4 w-4 bg-[#6b2d4f]', pos]"
+                        aria-hidden="true"
+                    ></span>
+
+                    <h1 class="font-serif font-bold text-[#6b2d4f] leading-[0.85] tracking-tight text-left" aria-label="Portfolio">
+                        <span aria-hidden="true" class="block text-7xl md:text-9xl">Port</span>
+                        <span aria-hidden="true" class="block text-7xl md:text-9xl italic ml-16 md:ml-40">folio</span>
+                    </h1>
+
+                    <!-- Forme rose (blob) -->
+                    <svg
+                        class="float absolute right-6 top-6 w-14 md:right-14 md:top-8 md:w-20"
+                        viewBox="0 0 100 100"
+                        fill="#e87eb0"
+                        aria-hidden="true"
+                    >
+                        <path d="M50 8c10-6 22 0 24 12 12 0 22 10 18 22-2 8-8 12-14 14 6 10 2 22-10 26-8 2-14-2-18-8-8 8-22 6-26-4-2-6 0-12 4-16C14 54 8 44 14 34c4-8 12-10 20-8 0-10 6-16 16-18z" />
+                    </svg>
+
+                    <!-- Astérisque bleu flou -->
+                    <svg
+                        class="float-slow absolute left-3 top-[58%] w-12 md:left-12 md:w-16 blur-[2px]"
+                        viewBox="0 0 100 100"
+                        fill="none"
+                        stroke="#6f9bf0"
+                        stroke-width="12"
+                        stroke-linecap="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M50 8 V92 M14 28 L86 72 M86 28 L14 72" />
+                    </svg>
+
+                    <!-- Curseur orange -->
+                    <svg
+                        class="float absolute -right-3 top-[60%] w-9 md:-right-9 md:w-12 drop-shadow-sm"
+                        viewBox="0 0 40 40"
+                        fill="#ffb347"
+                        stroke="#ffb347"
+                        stroke-width="3"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M4 6 L34 18 L19 22 L14 36 Z" />
+                    </svg>
+                </div>
+
+                <!-- Pastille sous-titre -->
                 <div
-                    v-for="tab in tabs"
-                    :key="`strip-${tab.id}`"
-                    class="strip"
-                    :style="stripStyle(tab)"
-                    aria-hidden="true"
-                ></div>
-
-                <!-- Onglets -->
-                <button
-                    v-for="tab in tabs"
-                    :key="tab.id"
-                    type="button"
-                    role="tab"
-                    :aria-selected="activeTab === tab.id"
-                    :class="['tab', { 'is-active': activeTab === tab.id }]"
-                    :style="tabStyle(tab)"
-                    @click="select(tab.id)"
-                    @mouseenter="hovered = tab.id"
-                    @mouseleave="hovered = null"
-                    @focus="hovered = tab.id"
-                    @blur="hovered = null"
+                    class="absolute left-1/2 -bottom-6 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-b from-[#f4a6cb] to-[#e07aa9] px-6 py-3 md:px-10 font-sans text-base md:text-2xl font-semibold text-white shadow-md"
                 >
-                    <span class="tab-label">{{ tab.label }}</span>
-                </button>
+                    Design et Web developer
+                </div>
             </div>
 
-            <!-- LA FICHE PRINCIPALE -->
-            <main
-                role="tabpanel"
-                class="relative z-10 rounded-b-[40px] min-h-[560px] p-6 md:p-12 shadow-2xl transition-colors duration-500"
-                :style="{ backgroundColor: current.color }"
-            >
-                <!-- 1. Contenu Accueil -->
-                <div v-show="activeTab === 'accueil'" class="flex flex-col items-center justify-center h-full text-center space-y-6 pt-10 md:pt-16">
-                    <h1 class="font-cursive text-6xl md:text-8xl text-black drop-shadow-[3px_3px_0_rgba(255,255,255,1)]">Design et Web developer</h1>
-                    <h2 class="font-sans font-black text-5xl md:text-7xl text-[#ff8000] drop-shadow-[3px_3px_0_rgba(0,0,0,1)] tracking-tighter">PORTFOLIO</h2>
-
-                    <div class="mt-12 bg-[#ffb3d9] border border-black px-8 py-3 rounded-full text-sm font-bold uppercase tracking-widest">
-                        Maurine Meeus
-                    </div>
-                </div>
-
-                <!-- 2. Contenu À propos -->
-                <div v-show="activeTab === 'a-propos'">
-                    <h2 class="font-cursive text-5xl mb-10">À propos de moi</h2>
-                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-black/5 font-sans leading-relaxed text-lg max-w-2xl">
-                        <p>Étudiante en développement web à l'IFOSUP Wavre.</p>
-                        <p class="mt-4">Curieuse et créative, je serais ravie de mettre mes compétences au service de votre équipe !</p>
-                    </div>
-                </div>
-
-                <!-- 3. Contenu Mes projets -->
-                <div v-show="activeTab === 'mes-projets'">
-                    <h2 class="font-cursive text-5xl mb-10">Mes Projets</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div
-                            v-for="(project, index) in projects"
-                            :key="project.slug"
-                            :class="[
-                                'bg-white p-5 rounded-2xl shadow-md transition-all duration-300 border border-black/10 flex flex-col group',
-                                index % 2 === 0 ? 'rotate-1 hover:rotate-0 hover:-translate-y-2' : '-rotate-1 hover:rotate-0 hover:-translate-y-2',
-                            ]"
-                        >
-                            <div class="bg-gray-100 h-48 rounded-xl mb-5 overflow-hidden border border-black/5">
-                                <img
-                                    v-if="project.cover_url"
-                                    :src="project.cover_url"
-                                    :alt="project.title"
-                                    width="1200"
-                                    height="675"
-                                    loading="lazy"
-                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                />
-                                <div v-else class="w-full h-full flex items-center justify-center text-gray-400 font-sans text-sm">Sans image</div>
-                            </div>
-
-                            <h3 class="font-bold text-xl mb-2">{{ project.title }}</h3>
-                            <p class="text-sm text-gray-600 mb-6 font-sans flex-grow leading-relaxed">{{ project.summary }}</p>
-
-                            <Link :href="show(project)" class="mt-auto block text-center bg-black text-white font-bold py-3 px-4 rounded-xl hover:bg-[#ff8000] hover:scale-[1.02] transition-all">
-                                Ouvrir le dossier ↗
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-
-
-               <!-- 4. Contenu Contact -->
-             <div v-show="activeTab === 'contact'">
-                 <h2 class="font-cursive text-5xl mb-10">Travaillons ensemble</h2>
-                 <div class="bg-white p-8 rounded-3xl shadow-sm border border-black/5 font-sans leading-relaxed text-lg max-w-2xl text-left">
-                     <p class="mb-4">Un projet en tête ? Envie de collaborer ? Écrivez-moi !</p>
-
-                     <Form
-                         v-bind="ContactController.store.form()"
-                         :reset-on-success="['name', 'email', 'message']"
-                         v-slot="{ errors, processing }"
-                         class="space-y-6 mt-6"
-                     >
-                         <div class="grid gap-2">
-                             <Label for="name" class="font-bold">Nom</Label>
-                             <Input id="name" name="name" autocomplete="name" class="border-black/20" />
-                             <InputError :message="errors.name" />
-                         </div>
-
-                         <div class="grid gap-2">
-                             <Label for="email" class="font-bold">Adresse e-mail</Label>
-                             <Input id="email" name="email" type="email" autocomplete="email" class="border-black/20" />
-                             <InputError :message="errors.email" />
-                         </div>
-
-                         <div class="grid gap-2">
-                             <Label for="message" class="font-bold">Message</Label>
-                             <Textarea id="message" name="message" rows="4" class="border-black/20" />
-                             <InputError :message="errors.message" />
-                         </div>
-
-                         <Button type="submit" :disabled="processing" class="bg-black text-white font-bold py-6 px-8 rounded-full hover:bg-[#ff8000] transition-colors w-full text-lg">
-                             <Spinner v-if="processing" class="mr-2" />
-                             Envoyer le message
-                         </Button>
-                     </Form>
-
-                 </div>
-             </div>
-            </main>
-
-           <!-- Décorations (Étoile) -->
-            <div class="absolute top-1/2 -right-16 z-50 transform rotate-12 pointer-events-none drop-shadow-md">
-                <svg width="100" height="100" viewBox="0 0 100 100" fill="none" stroke="#ff8000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" /></svg>
+            <!-- Étiquette du nom -->
+            <div class="absolute bottom-5 left-4 md:bottom-8 md:left-10 rounded-sm bg-[#d4e29a] px-4 py-2 font-sans text-xs md:text-sm text-[#4a3a2f]">
+                Maurine Meeus
             </div>
-            <!-- Petite fleur en haut à gauche -->
-            <div class="absolute -top-12 -left-8 z-50 transform -rotate-12 pointer-events-none drop-shadow-md">
-                <svg width="80" height="80" viewBox="0 0 100 100" fill="#ff8000" stroke="black" stroke-width="4"><path d="M50 15 C 30 15, 20 35, 35 50 C 20 65, 40 85, 50 75 C 60 85, 80 65, 65 50 C 80 35, 70 15, 50 15" /></svg>
+
+            <!-- Année -->
+            <div class="absolute bottom-4 right-5 md:bottom-7 md:right-14 flex font-sans font-black text-[#6b2d4f] text-3xl md:text-5xl" :aria-label="String(year)">
+                <span
+                    v-for="(digit, i) in String(year).split('')"
+                    :key="i"
+                    aria-hidden="true"
+                    class="inline-block"
+                    :style="{ transform: digitStyles[i % digitStyles.length] }"
+                >
+                    {{ digit }}
+                </span>
             </div>
         </div>
 
-        <!-- FOOTER (Déplacé ici, juste sous le dossier, dans le conteneur principal) -->
-        <footer class="mt-8 pb-4 text-center text-sm font-sans font-bold text-gray-500">
-            © Maurine Meeus - <Link :href="legal()" class="hover:text-black underline">Mentions légales</Link>
-        </footer>
+        <!-- 2. Contenu À propos : un carnet posé sur la table -->
+        <div v-show="activeTab === 'a-propos'">
+            <h2 class="sr-only">À propos de moi</h2>
 
-    </div>
+            <!-- La table (nappe vichy) -->
+            <div class="gingham relative rounded-[28px] p-4 pb-8 md:p-10 md:pb-12">
+                <!-- Stylo rose -->
+                <div class="pointer-events-none absolute -left-1 top-8 z-30 hidden h-64 w-5 -rotate-6 md:block" aria-hidden="true">
+                    <div class="h-16 rounded-t-full bg-white/60 border border-black/10"></div>
+                    <div class="h-48 rounded-b-md bg-gradient-to-r from-[#f8b7cf] to-[#f08fb8] border border-black/10 shadow-md"></div>
+                </div>
+
+                <!-- Le carnet -->
+                <div class="relative mx-auto max-w-5xl -rotate-1 drop-shadow-xl">
+                    <div class="grid md:grid-cols-2 rounded-2xl overflow-hidden border border-[#efc9d8]">
+                        <!-- Page de gauche -->
+                        <section class="paper relative p-6 md:p-10 md:pr-12">
+                            <span class="absolute left-6 top-4 -rotate-6 font-cursive text-xl text-[#d98aa8]">à propos de moi</span>
+
+                            <p class="font-cursive text-6xl md:text-8xl leading-tight pt-6 bg-gradient-to-r from-[#7fa85a] via-[#d98aa8] to-[#a77b95] bg-clip-text text-transparent">
+                                Bonjour !
+                            </p>
+
+                            <div class="mt-4 rounded-xl border border-[#f3a9c2] bg-[#fbd3e0] p-4 font-sans text-sm leading-relaxed">
+                                Moi c'est <strong>Maurine</strong>, étudiante en développement web à l'IFOSUP Wavre.
+                            </div>
+
+                            <div class="mt-6 flex gap-4 items-start">
+                                <!-- Photo collée au scotch -->
+                                <div class="relative w-32 shrink-0 -rotate-3 md:w-40">
+                                    <span class="tape -left-3 -top-2 -rotate-[35deg]" aria-hidden="true"></span>
+                                    <span class="tape -right-3 -top-2 rotate-[35deg]" aria-hidden="true"></span>
+                                    <div class="rounded-md border-2 border-dashed border-[#d9c3a5] bg-white p-2 shadow-md">
+                                        <img v-if="photo" :src="photo" alt="Maurine Meeus" class="aspect-[3/4] w-full rounded-sm object-cover" />
+                                        <div v-else class="flex aspect-[3/4] w-full items-center justify-center rounded-sm bg-gradient-to-br from-[#f8c6d9] via-[#ffe3a6] to-[#b8c6f5]" aria-hidden="true">
+                                            <span class="font-cursive text-5xl text-white drop-shadow">MM</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex-1">
+                                    <p class="font-sans text-sm leading-relaxed text-[#5c7a3a]">
+                                        Curieuse et créative, je serais ravie de mettre mes compétences au service de votre équipe !
+                                    </p>
+
+                                    <!-- Post-it contact -->
+                                    <div class="sticky-note mt-5 rotate-2 bg-[#ffe66d] p-4 shadow-md">
+                                        <p class="font-cursive text-3xl leading-none text-[#c97fa0]">Contacts</p>
+                                        <p class="mt-2 font-sans text-xs leading-relaxed">
+                                            Envie de collaborer ? Rendez-vous dans l'onglet <strong>Contact</strong> ↗
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Page de droite -->
+                        <section class="paper relative p-6 md:p-10 md:pl-12 overflow-hidden">
+                            <!-- Fleur décorative -->
+                            <svg class="float absolute right-5 top-5 w-14 md:w-16" viewBox="0 0 100 100" aria-hidden="true">
+                                <g fill="#f08fb8">
+                                    <circle cx="50" cy="22" r="18" /><circle cx="78" cy="42" r="18" /><circle cx="68" cy="75" r="18" /><circle cx="32" cy="75" r="18" /><circle cx="22" cy="42" r="18" />
+                                </g>
+                                <circle cx="50" cy="52" r="10" fill="#ffe66d" />
+                            </svg>
+
+                            <p class="font-cursive text-5xl md:text-7xl leading-tight pt-2 bg-gradient-to-r from-[#d98aa8] to-[#7fa85a] bg-clip-text text-transparent">
+                                Mes outils
+                            </p>
+                            <p class="font-cursive text-3xl md:text-4xl -mt-1 ml-10 text-[#a77b95]">&amp; compétences</p>
+
+                            <!-- Étiquettes -->
+                            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                                <span class="-rotate-6 rounded-full bg-[#8fb33a] px-5 py-1.5 font-cursive text-2xl text-white shadow-sm">Curieuse</span>
+                                <span class="ribbon rotate-3 bg-[#f6a6c1] px-8 py-2 font-cursive text-2xl text-white">Créative</span>
+                                <span class="-rotate-2 rounded-md border border-[#f3a9c2] bg-white/80 px-3 py-1 font-sans text-xs font-bold uppercase tracking-widest">Design</span>
+                                <span class="rotate-2 rounded-md border border-[#d9c3a5] bg-white/80 px-3 py-1 font-sans text-xs font-bold uppercase tracking-widest">Web developer</span>
+                            </div>
+
+                            <!-- Enveloppe avec les outils -->
+                            <div class="relative mx-auto mt-16 h-56 w-full max-w-sm">
+                                <div class="envelope-flap absolute inset-x-0 -top-10 h-12 bg-[#f9d3e1]" aria-hidden="true"></div>
+                                <div class="absolute inset-0 rounded-xl bg-[#f4b6cd]" aria-hidden="true"></div>
+
+                                <div
+                                    v-for="tool in tools"
+                                    :key="tool.name"
+                                    class="absolute z-10 flex h-[74px] w-[74px] flex-col items-center justify-center gap-1 rounded-xl bg-white shadow-md"
+                                    :style="{ left: tool.left, top: tool.top, transform: `rotate(${tool.rotate}deg)` }"
+                                >
+                                    <span class="flex h-8 w-8 items-center justify-center rounded-full font-sans text-sm font-black text-white" :style="{ backgroundColor: tool.color }">
+                                        {{ tool.name.charAt(0) }}
+                                    </span>
+                                    <span class="font-sans text-[10px] font-bold">{{ tool.name }}</span>
+                                </div>
+
+                                <div class="envelope-front absolute inset-0 z-20 rounded-xl bg-gradient-to-b from-[#f8c6d9] to-[#f19cc3]" aria-hidden="true"></div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Anneaux de la reliure (ordinateur) -->
+                    <div class="pointer-events-none absolute inset-y-6 left-1/2 z-20 hidden -translate-x-1/2 flex-col justify-between md:flex" aria-hidden="true">
+                        <span
+                            v-for="n in 7"
+                            :key="n"
+                            class="block h-5 w-14 -translate-x-0 rounded-full border-[5px] bg-white/30 shadow-sm"
+                            :class="n % 2 ? 'border-[#f2b6cc]' : 'border-[#e8e08a]'"
+                        ></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Contenu Mes projets -->
+        <div v-show="activeTab === 'mes-projets'">
+            <h2 class="font-cursive text-5xl mb-10">Mes Projets</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div v-for="(project, index) in projects" :key="project.slug" :class="['bg-white p-5 rounded-2xl shadow-md transition-all duration-300 border border-black/10 flex flex-col group', index % 2 === 0 ? 'rotate-1 hover:rotate-0 hover:-translate-y-2' : '-rotate-1 hover:rotate-0 hover:-translate-y-2']">
+                    <div class="bg-gray-100 h-48 rounded-xl mb-5 overflow-hidden border border-black/5">
+                        <img v-if="project.cover_url" :src="project.cover_url" :alt="project.title" width="1200" height="675" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <div v-else class="w-full h-full flex items-center justify-center text-gray-400 font-sans text-sm">Sans image</div>
+                    </div>
+                    <h3 class="font-bold text-xl mb-2">{{ project.title }}</h3>
+                    <p class="text-sm text-gray-600 mb-6 font-sans flex-grow leading-relaxed">{{ project.summary }}</p>
+                    <Link :href="show(project)" class="mt-auto block text-center bg-black text-white font-bold py-3 px-4 rounded-xl hover:bg-[#ff8000] hover:scale-[1.02] transition-all">
+                        Ouvrir le dossier ↗
+                    </Link>
+                </div>
+            </div>
+        </div>
+
+       <!-- 4. Contenu Contact -->
+        <div v-show="activeTab === 'contact'">
+            <h2 class="font-cursive text-5xl mb-10">Travaillons ensemble</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-black/5 font-sans leading-relaxed text-lg max-w-2xl text-left">
+                <p class="mb-4">Un projet en tête ? Envie de collaborer ? Écrivez-moi !</p>
+
+                <!-- LE MESSAGE DE SUCCÈS -->
+                <div v-if="page.props.toast" class="bg-[#99ffcc] border-2 border-black text-black font-bold p-4 rounded-xl mb-6 shadow-[2px_2px_0_rgba(0,0,0,1)] flex items-center gap-3">
+                    <span class="text-2xl">✅</span>
+                    {{ page.props.toast.message }}
+                </div>
+
+                <!-- LE MESSAGE D'ERREUR (si le formulaire est vide ou invalide) -->
+                <div v-if="Object.keys(page.props.errors || {}).length > 0" class="bg-[#ffb3d9] border-2 border-black text-black font-bold p-4 rounded-xl mb-6 shadow-[2px_2px_0_rgba(0,0,0,1)] flex items-center gap-3">
+                    <span class="text-2xl">❌</span>
+                    Veuillez corriger les erreurs ci-dessous.
+                </div>
+
+                <Form v-bind="ContactController.store.form()" :reset-on-success="['name', 'email', 'message']" v-slot="{ errors, processing }" class="space-y-6 mt-6">
+
+                    <div class="grid gap-2">
+                        <Label for="name" class="font-bold">Nom</Label>
+                        <Input id="name" name="name" autocomplete="name" class="border-black/20" />
+                        <InputError :message="errors.name" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="email" class="font-bold">Adresse e-mail</Label>
+                        <Input id="email" name="email" type="email" autocomplete="email" class="border-black/20" />
+                        <InputError :message="errors.email" />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="message" class="font-bold">Message</Label>
+                        <Textarea id="message" name="message" rows="4" class="border-black/20" />
+                        <InputError :message="errors.message" />
+                    </div>
+                    <Button type="submit" :disabled="processing" class="bg-black text-white font-bold py-6 px-8 rounded-full hover:bg-[#ff8000] transition-colors w-full text-lg">
+                        <Spinner v-if="processing" class="mr-2" /> Envoyer le message
+                    </Button>
+                </Form>
+            </div>
+        </div>
+
+    </FolderLayout>
 </template>
 
 <style scoped>
-.folder {
-    --tab-h: 46px; /* hauteur visible d'un onglet */
-    --step: 24px; /* épaisseur visible de chaque bande */
-    --zone: calc(var(--tab-h) + 4 * var(--step)); /* hauteur totale des intercalaires */
-    --sr: 12px; /* arrondi des coins des bandes */
-    --r: 6px; /* rayon de l'épaulement à la base de l'onglet (petit sur mobile pour ne pas dépasser) */
-}
-
-@media (min-width: 768px) {
-    .folder {
-        --tab-h: 60px;
-        --step: 30px;
-        --r: 14px;
-        --sr: 24px;
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) rotate(4deg);
     }
 }
 
-/* Bandes colorées derrière les onglets : elles comblent le vide jusqu'à la fiche */
-.strip {
+.float {
+    animation: float 5s ease-in-out infinite;
+}
+
+.float-slow {
+    animation: float 8s ease-in-out infinite reverse;
+}
+
+/* --- Page À propos : carnet --- */
+.gingham {
+    background-color: #eef7df;
+    background-image:
+        linear-gradient(90deg, rgba(150, 200, 110, 0.4) 50%, transparent 50%),
+        linear-gradient(rgba(150, 200, 110, 0.4) 50%, transparent 50%);
+    background-size: 44px 44px;
+}
+
+.paper {
+    background-color: #fff9ef;
+    background-image: radial-gradient(#ecd6cb 1px, transparent 1px);
+    background-size: 14px 14px;
+}
+
+.tape {
     position: absolute;
-    left: 0;
-    right: 0;
-    border-radius: var(--sr) var(--sr) 0 0;
-    transition:
-        top 0.45s ease,
-        height 0.45s ease,
-        transform 0.25s ease,
-        background-color 0.3s ease;
+    z-index: 5;
+    width: 44px;
+    height: 16px;
+    background: rgba(255, 236, 150, 0.75);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-/* Onglet : sommet très arrondi, couleur pilotée par --c */
-.tab {
-    position: absolute;
-    width: 21%;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    background-color: var(--c);
-    border: 0;
-    border-radius: 26px 26px 0 0;
-    cursor: pointer;
-    transition:
-        top 0.45s ease,
-        height 0.45s ease,
-        transform 0.25s ease,
-        background-color 0.3s ease;
+.sticky-note {
+    clip-path: polygon(0 0, 100% 0, 100% 86%, 90% 100%, 0 100%);
 }
 
-/* Épaulements courbes à la base de l'onglet (effet intercalaire) */
-.tab::before,
-.tab::after {
-    content: '';
-    position: absolute;
-    bottom: var(--pad);
-    width: var(--r);
-    height: var(--r);
-    pointer-events: none;
-}
-.tab::before {
-    left: calc(var(--r) * -1);
-    background: radial-gradient(circle at 0 0, transparent calc(var(--r) - 0.5px), var(--c) var(--r));
-}
-.tab::after {
-    right: calc(var(--r) * -1);
-    background: radial-gradient(circle at 100% 0, transparent calc(var(--r) - 0.5px), var(--c) var(--r));
+.ribbon {
+    clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%, 6% 50%);
 }
 
-.tab-label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: var(--tab-h);
-    max-width: 100%;
-    padding: 0 6px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    font-family: 'Poppins', sans-serif;
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: #000;
+.envelope-flap {
+    clip-path: polygon(0 100%, 50% 0, 100% 100%);
 }
 
-@media (min-width: 768px) {
-    .tab-label {
-        font-size: 14px;
-        letter-spacing: 0.06em;
-    }
-}
-
-.tab.is-active .tab-label {
-    font-weight: 800;
-}
-
-.tab:focus-visible {
-    outline: 3px solid #000;
-    outline-offset: 2px;
+.envelope-front {
+    clip-path: polygon(0 34%, 50% 62%, 100% 34%, 100% 100%, 0 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .tab,
-    .strip {
-        transition: none;
+    .float,
+    .float-slow {
+        animation: none;
     }
 }
 </style>
